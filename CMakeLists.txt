@@ -5,5 +5,9 @@ set(CMAKE_CXX_STANDARD 14)
 
 include_directories(
         "/usr/local/include/eigen3"
+        "${PROJECT_SOURCE_DIR}/include"
 )
-add_executable(dlfs_cpp main.cpp)
+
+SET(SOURCES main.cpp src/ch01/eigen_demo.cpp)
+
+add_executable(dlfs_cpp ${SOURCES})

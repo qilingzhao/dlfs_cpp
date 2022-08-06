@@ -1,6 +1,7 @@
 #include <iostream>
+#include "ch01/eigen_demo.hpp"
 
 int main() {
-    std::cout << "Hello, World!" << std::endl;
+    test_eigen();
     return 0;
 }
