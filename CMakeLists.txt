@@ -8,6 +8,7 @@ include_directories(
         "${PROJECT_SOURCE_DIR}/include"
 )
 
-SET(SOURCES main.cpp src/ch01/eigen_demo.cpp)
+SET(SOURCES main.cpp src/ch01/eigen_demo.cpp
+        src/ch02/perceptron.cpp)
 
 add_executable(dlfs_cpp ${SOURCES})
