@@ -135,11 +135,11 @@ std::map<std::string, Eigen::MatrixXf> load_network_param() {
     resultMap["b1"] = b1;
     resultMap["b2"] = b2;
     resultMap["b3"] = b3;
-    std::cout << "w1: " << std::endl;
-    for (int i = 0; i < w1.cols(); i++) {
-        std::cout << w1(0, i) << "|";
-    }
-    std::cout << std::endl;
+//    std::cout << "w1: " << std::endl;
+//    for (int i = 0; i < w1.cols(); i++) {
+//        std::cout << w1(0, i) << "|";
+//    }
+//    std::cout << std::endl;
 //    for (auto it = resultMap.begin(); it != resultMap.end(); ++it) {
 //        std::cout << it->first << " rows: " << it->second.rows() << "  cols: " << it->second.cols() << std::endl;
 //    }
