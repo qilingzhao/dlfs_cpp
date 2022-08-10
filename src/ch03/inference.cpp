@@ -16,14 +16,14 @@ std::pair<Eigen::MatrixXf, Eigen::MatrixXi> load_test_mnist() {
     std::cout << "Nbr of test images = " << dataset.test_images.size() << std::endl;
     std::cout << "Nbr of test labels = " << dataset.test_labels.size() << std::endl;
 
-    int cnt = 0;
-    for (auto it = dataset.test_images[0].begin(); it != dataset.test_images[0].end(); ++it) {
-        std::cout << float(*it) / 256 << " ";
-        cnt++;
-        if (cnt % 28 == 0) {
-            std::cout << std::endl;
-        }
-    }
+//    int cnt = 0;
+//    for (auto it = dataset.test_images[0].begin(); it != dataset.test_images[0].end(); ++it) {
+//        std::cout << float(*it) / 256 << " ";
+//        cnt++;
+//        if (cnt % 28 == 0) {
+//            std::cout << std::endl;
+//        }
+//    }
 
     Eigen::MatrixXf images;
     images.resize(dataset.test_images.size(), 28 * 28);
@@ -33,7 +33,7 @@ std::pair<Eigen::MatrixXf, Eigen::MatrixXi> load_test_mnist() {
             images(i, j) = image[j];
         }
     }
-    images /= images.maxCoeff();
+    images /= 255;
 
     Eigen::MatrixXi labels;
     labels.resize(1, dataset.test_labels.size());
@@ -94,6 +94,16 @@ struct NetworkParam {
                             REQUIRED(b1, "b1"),REQUIRED(b2, "b2"),REQUIRED(b3, "b3"));
 };
 
+Eigen::MatrixXf covert2DVecToMat(std::vector<std::vector<float> > vec) {
+    Eigen::MatrixXf mat;
+    mat.resize(vec.size(), vec.front().size());
+    for (int i = 0; i < vec.size(); i++) {
+        for (int j = 0; j < vec.front().size(); j++) {
+            mat(i, j) = vec[i][j];
+        }
+    }
+    return mat;
+}
 std::map<std::string, Eigen::MatrixXf> load_network_param() {
     std::ifstream ifs(INFER_PARAM_LOCATION);
     std::cout << INFER_PARAM_LOCATION << std::endl;
@@ -111,11 +121,12 @@ std::map<std::string, Eigen::MatrixXf> load_network_param() {
 //        std::cout << std::endl;
 //    }
 
-    Eigen::MatrixXf w1 = Eigen::Map<Eigen::MatrixXf>(np.W1.data()->data(), int(np.W1.size()), np.W1.front().size());
-    Eigen::MatrixXf w2 = Eigen::Map<Eigen::MatrixXf>(np.W2.data()->data(), int(np.W2.size()), np.W2.front().size());
-    Eigen::MatrixXf w3 = Eigen::Map<Eigen::MatrixXf>(np.W3.data()->data(), int(np.W3.size()), np.W3.front().size());
+    Eigen::MatrixXf w1 = covert2DVecToMat(np.W1);
+    Eigen::MatrixXf w2 = covert2DVecToMat(np.W2);
+    Eigen::MatrixXf w3 = covert2DVecToMat(np.W3);
     Eigen::MatrixXf b1 = Eigen::Map<Eigen::MatrixXf>(np.b1.data(), 1, np.b1.size());
     Eigen::MatrixXf b2 = Eigen::Map<Eigen::MatrixXf>(np.b2.data(), 1, np.b2.size());
+    Eigen::MatrixXf b3 = Eigen::Map<Eigen::MatrixXf>(np.b3.data(), 1, np.b3.size());
 
     std::map<std::string, Eigen::MatrixXf> resultMap;
     resultMap["w1"] = w1;
@@ -123,13 +134,46 @@ std::map<std::string, Eigen::MatrixXf> load_network_param() {
     resultMap["w3"] = w3;
     resultMap["b1"] = b1;
     resultMap["b2"] = b2;
+    resultMap["b3"] = b3;
+    std::cout << "w1: " << std::endl;
+    for (int i = 0; i < w1.cols(); i++) {
+        std::cout << w1(0, i) << "|";
+    }
+    std::cout << std::endl;
+//    for (auto it = resultMap.begin(); it != resultMap.end(); ++it) {
+//        std::cout << it->first << " rows: " << it->second.rows() << "  cols: " << it->second.cols() << std::endl;
+//    }
     return resultMap;
 }
 
 void inference() {
+    std::pair<Eigen::MatrixXf, Eigen::MatrixXi>  mnist_data_pair = load_test_mnist();
+    Eigen::MatrixXf infer_data = mnist_data_pair.first;
+//    std::cout << infer_data.row(0) << std::endl;
     std::map<std::string, Eigen::MatrixXf> network_params = load_network_param();
-    for (auto it = network_params.begin(); it != network_params.end(); ++it) {
-        std::cout << it->first << " rows: " << it->second.rows() << "  cols: " << it->second.cols() << std::endl;
+
+    for (int layer_num = 1; layer_num <= 3; layer_num++) {
+        std::string weight_name("w" + std::to_string(layer_num));
+        std::string bias_name("b" + std::to_string(layer_num));
+        infer_data = infer_data * network_params[weight_name];
+
+        for (int row = 0; row < infer_data.rows(); row++) {
+            infer_data.row(row) += network_params[bias_name];
+        }
+        if (layer_num == 3) {
+            infer_data = softmax(infer_data);
+        } else {
+            infer_data = sigmoid(infer_data);
+        }
     }
 
+    int succ = 0;
+    for (int row = 0; row < infer_data.rows(); row++) {
+        Eigen::Index col_num;
+        infer_data.row(row).maxCoeff(&col_num);
+        if (col_num == mnist_data_pair.second(0, row)) {
+            succ++;
+        }
+    }
+    std::cout << "acc: " << succ*1.0 / float(infer_data.rows());
 }
