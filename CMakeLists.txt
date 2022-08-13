@@ -18,7 +18,8 @@ set(INFER_PARAM_DIR ${CMAKE_CURRENT_LIST_DIR}/data/inference_param)
 SET(SOURCES main.cpp
         src/ch01/eigen_demo.cpp
         src/ch02/perceptron.cpp
-        src/ch03/inference.cpp)
+        src/ch03/inference.cpp
+        src/ch04/nn_study.cpp)
 
 add_executable(dlfs_cpp ${SOURCES})
 target_compile_definitions(dlfs_cpp PRIVATE MNIST_DATA_LOCATION="${MNIST_DATA_DIR}")
