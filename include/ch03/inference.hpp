@@ -16,10 +16,12 @@
 void inference();
 
 // sigmoid: 1 / (1 + exp(-x))
-Eigen::MatrixXf sigmoid(Eigen::MatrixXf input);
+Eigen::MatrixXd sigmoid(const Eigen::MatrixXd& input);
 
 // softmax
-Eigen::MatrixXf softmax(Eigen::MatrixXf input);
+Eigen::MatrixXd softmax(const Eigen::MatrixXd& input);
 
+// 加载mnist数据集
+std::pair<Eigen::MatrixXd, Eigen::MatrixXi> load_mnist(std::string part= "test");
 
 #endif //DLFS_CPP_INFERENCE_HPP
