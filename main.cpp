@@ -3,6 +3,7 @@
 #include "ch02/perceptron.hpp"
 #include "ch03/inference.hpp"
 #include "ch04/nn_study.hpp"
+#include "ch05/computational_graph.hpp"
 int main() {
 //    test_eigen();
 
@@ -10,6 +11,9 @@ int main() {
 
 //    inference();
 
-    nn_study();
+//    nn_study();
+
+    nn_graph_study();
+
     return 0;
 }
