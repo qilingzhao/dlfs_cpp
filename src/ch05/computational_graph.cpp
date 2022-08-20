@@ -5,10 +5,6 @@
 
 #include "ch05/computational_graph.hpp"
 
-void nn_graph_study() {
-
-}
-
 // AddOp
 
 Eigen::MatrixXf AddOp::forward(const Eigen::MatrixXf& a, const Eigen::MatrixXf& b) const {
@@ -48,24 +44,27 @@ Eigen::MatrixXf ReLUOp::backward(const Eigen::MatrixXf &dOut) const {
 // SigmoidOp
 Eigen::MatrixXf SigmoidOp::forward(const Eigen::MatrixXf &x) {
     this->x = x;
-    Eigen::MatrixXf y = 1.0f / (1.0f + (x.array() * (-1.0)).exp());
-    this->y = y;
-    return y;
+    Eigen::MatrixXf ones = Eigen::MatrixXf::Ones(y.rows(), y.cols());
+    Eigen::MatrixXf yy = 1.0f / (1.0f + (x.array() * (-1.0)).exp());
+    this->y = yy;
+    return yy;
 }
 
 Eigen::MatrixXf SigmoidOp::backward(const Eigen::MatrixXf &dOut) const {
-    return dOut.array() * y.array() * (-1.f * y.array() + 1.f);
+    Eigen::MatrixXf ones = Eigen::MatrixXf::Ones(y.rows(), y.cols());
+//    std::cout << "dOut size " << dOut.rows() << " " << dOut.cols() << std::endl;
+//    std::cout << "y size " << y.rows() << " " << y.cols() << std::endl;
+    return dOut *  (-1.f * y + ones) * y; // TODO
 }
 
 // AffineOp
 
-Eigen::MatrixXf AffineOp::forward(const Eigen::MatrixXf& w, const Eigen::MatrixXf& b) {
-    this->w = w;
-    this->b = b;
-    Eigen::MatrixXf temp = x * w;
+Eigen::MatrixXf AffineOp::forward(const Eigen::MatrixXf& x) {
+    this->x = x;
+    Eigen::MatrixXf temp = x * this->w;
     for (int i = 0; i < temp.rows(); i++) {
         for (int j = 0; j < temp.cols(); j++) {
-            temp(i, j) += b(0, j);
+            temp(i, j) += this->b(0, j);
         }
     }
     return temp;
@@ -76,7 +75,6 @@ Eigen::MatrixXf AffineOp::backward(const Eigen::MatrixXf &dOut) {
     this->dB = dOut.colwise().sum();
     return dOut * this->w.transpose();
 }
-
 
 
 Eigen::MatrixXf softmax(const Eigen::MatrixXf& input) {
@@ -113,8 +111,126 @@ Eigen::MatrixXf SoftmaxWithLossOp::backward() {
     int batch_size = this->t.size();
     Eigen::MatrixXf dX(this->y);
     for (int i = 0; i < dX.rows(); i++) {
-        dX(i, this->t(0, i)) = (dX(i, this->t(0, i)) - 1) / batch_size;
+        dX(i, this->t(0, i)) = dX(i, this->t(0, i)) - 1;
+        dX.row(i) /= float (batch_size);
     }
+
     return dX;
 }
 
+ThreeLayerNet::ThreeLayerNet() {
+    static std::default_random_engine e(time(0));
+    static std::normal_distribution<float> n(0,1);
+    const float iws = ThreeLayerNet::init_weight_std;
+    auto func = [iws](float dummy){return float(n(e)) * iws;};
+
+    Eigen::MatrixXf w1 = Eigen::MatrixXf::Zero(28*28, 50).unaryExpr(func);
+    Eigen::MatrixXf b1 = Eigen::MatrixXf::Zero(1, 50);
+    this->affine1 = AffineOp(w1, b1);
+
+    this->relu1 = ReLUOp();
+
+    Eigen::MatrixXf w2 = Eigen::MatrixXf::Zero(50, 100).unaryExpr(func);
+    Eigen::MatrixXf b2 = Eigen::MatrixXf::Zero(1, 100);
+    this->affine2 = AffineOp(w2, b2);
+
+    this->relu2 = ReLUOp();
+
+    Eigen::MatrixXf w3 = Eigen::MatrixXf::Zero(100, 10).unaryExpr(func);
+    Eigen::MatrixXf b3 = Eigen::MatrixXf::Zero(1, 10);
+    this->affine3 = AffineOp(w3, b3);
+
+    this->lastLayer = SoftmaxWithLossOp();
+
+    this->mnist_dataset = load_mnist("train");
+}
+
+void ThreeLayerNet::load_batch_data() {
+    Eigen::MatrixXd train_images = this->mnist_dataset.first;
+    Eigen::MatrixXi train_labels = this->mnist_dataset.second;
+
+    batch_images.resize(batch_size, train_images.cols());
+    batch_labels.resize(1, batch_size);
+
+    std::random_device rd;
+    std::default_random_engine e(rd());
+    std::uniform_int_distribution<> u(0,batch_size);
+    for (int i = 0; i < batch_size; i++) {
+        int idx = u(e);
+//        std::cout << "chioce idx: " << idx << std::endl;
+        batch_images.row(i) = train_images.row(i).cast<float>();
+        batch_labels(0, i) = train_labels(0, idx);
+    }
+}
+
+Eigen::MatrixXf ThreeLayerNet::predict() {
+    Eigen::MatrixXf infer_data = this->batch_images;
+    Eigen::MatrixXf af_1 = this->affine1.forward(infer_data);
+    Eigen::MatrixXf re_1 = this->relu1.forward(af_1);
+
+    Eigen::MatrixXf af_2 = this->affine2.forward(re_1);
+    Eigen::MatrixXf re_2 = this->relu2.forward(af_2);
+
+    Eigen::MatrixXf af_3 = this->affine3.forward(re_2);
+
+    return af_3;
+}
+
+float ThreeLayerNet::loss(Eigen::MatrixXf res) {
+    float lo = this->lastLayer.forward(res, this->batch_labels);
+    return lo;
+}
+
+void ThreeLayerNet::gradient() {
+    Eigen::MatrixXf dOut1 = this->lastLayer.backward();
+    Eigen::MatrixXf dOut2 = this->affine3.backward(dOut1);
+    Eigen::MatrixXf dOut3 = this->relu2.backward(dOut2);
+    Eigen::MatrixXf dOut4 = this->affine2.backward(dOut3);
+    Eigen::MatrixXf dOut5 = this->relu1.backward(dOut4);
+    Eigen::MatrixXf dOut6 = this->affine1.backward(dOut5);
+}
+
+void ThreeLayerNet::learn() {
+    this->affine1.w -= this->affine1.dW * ThreeLayerNet::learn_rate;
+    this->affine1.b -= this->affine1.dB * ThreeLayerNet::learn_rate;
+
+    this->affine2.w -= this->affine2.dW * ThreeLayerNet::learn_rate;
+    this->affine2.b -= this->affine2.dB * ThreeLayerNet::learn_rate;
+
+    this->affine3.w -= this->affine3.dW * ThreeLayerNet::learn_rate;
+    this->affine3.b -= this->affine3.dB * ThreeLayerNet::learn_rate;
+}
+
+float ThreeLayerNet::acc(Eigen::MatrixXf predictOut) {
+    int succ = 0;
+    for (int row = 0; row < predictOut.rows(); row++) {
+        Eigen::Index col_num;
+        predictOut.row(row).maxCoeff(&col_num);
+        if (col_num == this->batch_labels(0, row)) {
+            succ++;
+        }
+    }
+    return float(succ) / float(predictOut.rows());
+}
+
+
+const float ThreeLayerNet::learn_rate = 0.01f;
+const float ThreeLayerNet::init_weight_std = 0.1f;
+
+void nn_graph_study() {
+    ThreeLayerNet net;
+//    net.load_batch_data();
+
+    for (int i = 0; i < 10000; i++) {
+        std::cout << "iter cnt: " << i << std::endl;
+        net.load_batch_data();
+        Eigen::MatrixXf predictOut = net.predict();
+        float acc = net.acc(predictOut);
+        std::cout << "acc: " << acc << std::endl;
+        float loss = net.loss(predictOut);
+        std::cout << "loss: " << loss << std::endl;
+        net.gradient();
+//        std::cout << "finish grad()" << std::endl;
+        net.learn();
+    }
+}

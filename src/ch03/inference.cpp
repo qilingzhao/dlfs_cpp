@@ -25,6 +25,8 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXi> convert_dataset(std::vector<std::vec
     return res;
 }
 
+mnist::MNIST_dataset<std::vector, std::vector<uint8_t>, uint8_t> dataset;
+
 std::pair<Eigen::MatrixXd, Eigen::MatrixXi> load_mnist(std::string part) {
     // MNIST_DATA_LOCATION set by MNIST cmake config
     std::cout << "MNIST data directory: " << MNIST_DATA_LOCATION << std::endl;
