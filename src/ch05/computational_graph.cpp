@@ -207,7 +207,9 @@ void nn_graph_study() {
     TwoLayerNet net;
 //    net.load_batch_data();
 
-    for (int i = 0; i < 10000; i++) {
+    std::vector<float> accs;
+    std::vector<float> losses;
+    for (int i = 0; i < TwoLayerNet::iter_times; i++) {
         std::cout << "iter cnt: " << i << std::endl;
         net.load_batch_data();
         Eigen::MatrixXf predictOut = net.predict();
@@ -218,5 +220,14 @@ void nn_graph_study() {
         net.gradient();
 //        std::cout << "finish grad()" << std::endl;
         net.learn();
+        accs.push_back(acc);
+        losses.push_back(loss);
     }
+    std::ofstream ofs1("./accs.json");
+    configor::json accs_json = accs;
+    ofs1 << accs_json << std::endl;
+
+    std::ofstream ofs2("./losses.json");
+    configor::json losses_json = losses;
+    ofs2 << losses_json << std::endl;
 }

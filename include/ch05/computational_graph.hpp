@@ -11,6 +11,7 @@
 #include <map>
 #include <random>
 #include "ch03/inference.hpp"
+#include "configor/json.hpp"
 
 class Op {
 
@@ -97,6 +98,7 @@ public:
     static const int batch_size = 100;
     static const float learn_rate;
     static const float init_weight_std;
+    static const int iter_times = 2000;
     TwoLayerNet();
     void load_batch_data();
     Eigen::MatrixXf predict();
