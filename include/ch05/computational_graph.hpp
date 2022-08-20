@@ -48,7 +48,7 @@ public:
     Eigen::MatrixXf backward(const Eigen::MatrixXf& dOut) const;
 };
 
-class ThreeLayerNet;
+class TwoLayerNet;
 
 class AffineOp {
 private:
@@ -67,7 +67,7 @@ public:
     Eigen::MatrixXf forward(const Eigen::MatrixXf& x);
     Eigen::MatrixXf backward(const Eigen::MatrixXf& dOut);
 
-    friend class ThreeLayerNet;
+    friend class TwoLayerNet;
 };
 
 
@@ -84,22 +84,20 @@ public:
     Eigen::MatrixXf backward();
 };
 
-class ThreeLayerNet {
+class TwoLayerNet {
 private:
     Eigen::MatrixXf batch_images;
     Eigen::MatrixXi batch_labels;
     AffineOp affine1;
     ReLUOp relu1;
     AffineOp affine2;
-    ReLUOp relu2;
-    AffineOp affine3;
     SoftmaxWithLossOp lastLayer;
     std::pair<Eigen::MatrixXd, Eigen::MatrixXi> mnist_dataset;
 public:
     static const int batch_size = 100;
     static const float learn_rate;
     static const float init_weight_std;
-    ThreeLayerNet();
+    TwoLayerNet();
     void load_batch_data();
     Eigen::MatrixXf predict();
     float loss(Eigen::MatrixXf);

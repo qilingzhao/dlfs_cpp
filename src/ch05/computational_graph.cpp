@@ -118,10 +118,10 @@ Eigen::MatrixXf SoftmaxWithLossOp::backward() {
     return dX;
 }
 
-ThreeLayerNet::ThreeLayerNet() {
+TwoLayerNet::TwoLayerNet() {
     static std::default_random_engine e(time(0));
     static std::normal_distribution<float> n(0,1);
-    const float iws = ThreeLayerNet::init_weight_std;
+    const float iws = TwoLayerNet::init_weight_std;
     auto func = [iws](float dummy){return float(n(e)) * iws;};
 
     Eigen::MatrixXf w1 = Eigen::MatrixXf::Zero(28*28, 50).unaryExpr(func);
@@ -134,18 +134,12 @@ ThreeLayerNet::ThreeLayerNet() {
     Eigen::MatrixXf b2 = Eigen::MatrixXf::Zero(1, 100);
     this->affine2 = AffineOp(w2, b2);
 
-    this->relu2 = ReLUOp();
-
-    Eigen::MatrixXf w3 = Eigen::MatrixXf::Zero(100, 10).unaryExpr(func);
-    Eigen::MatrixXf b3 = Eigen::MatrixXf::Zero(1, 10);
-    this->affine3 = AffineOp(w3, b3);
-
     this->lastLayer = SoftmaxWithLossOp();
 
     this->mnist_dataset = load_mnist("train");
 }
 
-void ThreeLayerNet::load_batch_data() {
+void TwoLayerNet::load_batch_data() {
     Eigen::MatrixXd train_images = this->mnist_dataset.first;
     Eigen::MatrixXi train_labels = this->mnist_dataset.second;
 
@@ -163,45 +157,37 @@ void ThreeLayerNet::load_batch_data() {
     }
 }
 
-Eigen::MatrixXf ThreeLayerNet::predict() {
+Eigen::MatrixXf TwoLayerNet::predict() {
     Eigen::MatrixXf infer_data = this->batch_images;
     Eigen::MatrixXf af_1 = this->affine1.forward(infer_data);
     Eigen::MatrixXf re_1 = this->relu1.forward(af_1);
 
     Eigen::MatrixXf af_2 = this->affine2.forward(re_1);
-    Eigen::MatrixXf re_2 = this->relu2.forward(af_2);
 
-    Eigen::MatrixXf af_3 = this->affine3.forward(re_2);
-
-    return af_3;
+    return af_2;
 }
 
-float ThreeLayerNet::loss(Eigen::MatrixXf res) {
+float TwoLayerNet::loss(Eigen::MatrixXf res) {
     float lo = this->lastLayer.forward(res, this->batch_labels);
     return lo;
 }
 
-void ThreeLayerNet::gradient() {
+void TwoLayerNet::gradient() {
     Eigen::MatrixXf dOut1 = this->lastLayer.backward();
-    Eigen::MatrixXf dOut2 = this->affine3.backward(dOut1);
-    Eigen::MatrixXf dOut3 = this->relu2.backward(dOut2);
-    Eigen::MatrixXf dOut4 = this->affine2.backward(dOut3);
-    Eigen::MatrixXf dOut5 = this->relu1.backward(dOut4);
-    Eigen::MatrixXf dOut6 = this->affine1.backward(dOut5);
+    Eigen::MatrixXf dOut2 = this->affine2.backward(dOut1);
+    Eigen::MatrixXf dOut3 = this->relu1.backward(dOut2);
+    Eigen::MatrixXf dOut4 = this->affine1.backward(dOut3);
 }
 
-void ThreeLayerNet::learn() {
-    this->affine1.w -= this->affine1.dW * ThreeLayerNet::learn_rate;
-    this->affine1.b -= this->affine1.dB * ThreeLayerNet::learn_rate;
+void TwoLayerNet::learn() {
+    this->affine1.w -= this->affine1.dW * TwoLayerNet::learn_rate;
+    this->affine1.b -= this->affine1.dB * TwoLayerNet::learn_rate;
 
-    this->affine2.w -= this->affine2.dW * ThreeLayerNet::learn_rate;
-    this->affine2.b -= this->affine2.dB * ThreeLayerNet::learn_rate;
-
-    this->affine3.w -= this->affine3.dW * ThreeLayerNet::learn_rate;
-    this->affine3.b -= this->affine3.dB * ThreeLayerNet::learn_rate;
+    this->affine2.w -= this->affine2.dW * TwoLayerNet::learn_rate;
+    this->affine2.b -= this->affine2.dB * TwoLayerNet::learn_rate;
 }
 
-float ThreeLayerNet::acc(Eigen::MatrixXf predictOut) {
+float TwoLayerNet::acc(Eigen::MatrixXf predictOut) {
     int succ = 0;
     for (int row = 0; row < predictOut.rows(); row++) {
         Eigen::Index col_num;
@@ -214,11 +200,11 @@ float ThreeLayerNet::acc(Eigen::MatrixXf predictOut) {
 }
 
 
-const float ThreeLayerNet::learn_rate = 0.01f;
-const float ThreeLayerNet::init_weight_std = 0.1f;
+const float TwoLayerNet::learn_rate = 0.01f;
+const float TwoLayerNet::init_weight_std = 0.1f;
 
 void nn_graph_study() {
-    ThreeLayerNet net;
+    TwoLayerNet net;
 //    net.load_batch_data();
 
     for (int i = 0; i < 10000; i++) {
