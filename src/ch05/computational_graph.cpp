@@ -130,8 +130,8 @@ TwoLayerNet::TwoLayerNet() {
 
     this->relu1 = ReLUOp();
 
-    Eigen::MatrixXf w2 = Eigen::MatrixXf::Zero(50, 100).unaryExpr(func);
-    Eigen::MatrixXf b2 = Eigen::MatrixXf::Zero(1, 100);
+    Eigen::MatrixXf w2 = Eigen::MatrixXf::Zero(50, 10).unaryExpr(func);
+    Eigen::MatrixXf b2 = Eigen::MatrixXf::Zero(1, 10);
     this->affine2 = AffineOp(w2, b2);
 
     this->lastLayer = SoftmaxWithLossOp();
@@ -152,7 +152,7 @@ void TwoLayerNet::load_batch_data() {
     for (int i = 0; i < batch_size; i++) {
         int idx = u(e);
 //        std::cout << "chioce idx: " << idx << std::endl;
-        batch_images.row(i) = train_images.row(i).cast<float>();
+        batch_images.row(i) = train_images.row(idx).cast<float>();
         batch_labels(0, i) = train_labels(0, idx);
     }
 }
